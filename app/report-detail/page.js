@@ -11,6 +11,10 @@ function formatAsUSD(value) {
     // $ 기호나 쉼표가 포함된 문자열을 숫자로 변환
     const numericValue = parseFloat(String(value).replace(/[^0-9.-]+/g, ''));
     if (isNaN(numericValue)) {
+        return '$0.00'; // 숫자가 아니면 $0.00 반환
+    }
+    // 아주 작은 값(예: 0.001)도 $0.00으로 표시되도록 반올림 고려
+    if (Math.abs(numericValue) < 0.005) {
         return '$0.00';
     }
     return `$${numericValue.toLocaleString('en-US', {
@@ -19,13 +23,124 @@ function formatAsUSD(value) {
     })}`;
 }
 
+
+// --- ⬇️ 각 월별 카테고리 요약 컴포넌트 ⬇️ ---
+function MonthlyCategoryBreakdown({ monthlyBreakdownData, selectedYear }) {
+  if (!monthlyBreakdownData || Object.keys(monthlyBreakdownData).length === 0) {
+    return null; // 데이터 없으면 표시 안 함
+  }
+
+  // 최신 월 순서대로 정렬된 월 목록 가져오기 & 선택된 연도로 필터링
+  const sortedMonths = Object.keys(monthlyBreakdownData)
+                         .filter(month => month.startsWith(selectedYear + '-')) // 선택된 연도 필터링
+                         .sort((a, b) => b.localeCompare(a)); // 최신 월 순서
+
+  // 필터링된 월 데이터가 없으면 표시 안 함
+  if (sortedMonths.length === 0) {
+      return <div className="text-center text-gray-400 py-4 col-span-1 md:col-span-3 lg:col-span-6">선택된 연도({selectedYear})에 데이터가 없습니다.</div>;
+  }
+
+  return (
+    <div className="mb-8"> {/* 전체 섹션 아래 마진 */}
+      {/* 각 월별로 테이블 생성 */}
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        {sortedMonths.map(month => {
+          const categories = monthlyBreakdownData[month].categories;
+          const monthTotal = monthlyBreakdownData[month].total;
+
+          if (!categories || categories.length === 0 || monthTotal === 0) {
+            return null;
+          }
+          return (
+            <div key={month} className="bg-gray-800 shadow-md rounded-lg border border-gray-700 overflow-hidden text-sm">
+              <h3 className="px-3 py-2 bg-gray-700 font-semibold text-gray-200">{month}</h3>
+              <table className="w-full">
+                <thead className="bg-gray-600">
+                  <tr>
+                    {/* ⚠️ 수정: 패딩 줄임 (px-2 -> px-1), 최대 너비 설정 */}
+                    <th className="px-1 py-1 text-left text-xs font-medium text-gray-300 uppercase tracking-wider max-w-[80px] truncate">카테고리</th>
+                    {/* ⚠️ 수정: 패딩 줄임 (px-2 -> px-1) */}
+                    <th className="px-1 py-1 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">비용</th>
+                    {/* ⚠️ 수정: 패딩 줄임 (px-2 -> px-1) */}
+                    <th className="px-1 py-1 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">%</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-700">
+                  {categories.map(({ category, amount, percentage }) => (
+                    <tr key={category} className="hover:bg-gray-700">
+                      {/* ⚠️ 수정: 패딩 줄임 (px-2 -> px-1), 최대 너비 설정, 내용 줄바꿈 허용 */}
+                      <td className="px-1 py-1 text-gray-200 max-w-[80px] break-words">{category}</td>
+                      {/* ⚠️ 수정: 패딩 줄임 (px-2 -> px-1) */}
+                      <td className="px-1 py-1 whitespace-nowrap text-right text-red-400">{formatAsUSD(amount)}</td>
+                      {/* ⚠️ 수정: 패딩 줄임 (px-2 -> px-1), whitespace-nowrap 제거 */}
+                      <td className="px-1 py-1 text-right text-gray-200">{percentage.toFixed(1)}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+                 <tfoot className="bg-gray-700 border-t-2 border-gray-600">
+                    <tr>
+                         {/* ⚠️ 수정: 패딩 줄임 (px-2 -> px-1) */}
+                         <td className="px-1 py-1 font-bold text-gray-300 text-right">월 합계</td>
+                         {/* ⚠️ 수정: 패딩 줄임 (px-2 -> px-1) */}
+                         <td className="px-1 py-1 font-bold text-red-300 text-right">{formatAsUSD(monthTotal)}</td>
+                         {/* ⚠️ 수정: 패딩 줄임 (px-2 -> px-1) */}
+                         <td className="px-1 py-1 font-bold text-gray-300 text-right">100.0%</td>
+                    </tr>
+                 </tfoot>
+              </table>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+// --- ⬆️ 각 월별 카테고리 요약 컴포넌트 ⬆️ ---
+
+
+// --- ⬇️ 기존 컴포넌트 (선택된 월 카테고리 요약) ⬇️ ---
+function CategorySummaryTable({ categorySummary, monthlyTotal }) {
+  // ... (기존 CategorySummaryTable 코드 유지) ...
+    if (!categorySummary || categorySummary.length === 0 || monthlyTotal === 0) {
+    return null;
+  }
+  return (
+    <div className="max-w-xl mx-auto overflow-x-auto bg-gray-800 shadow-md rounded-lg border border-gray-700 mb-6">
+      <table className="w-full divide-y divide-gray-700">
+        <thead className="bg-gray-700">
+          <tr>
+            <th className="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">카테고리</th>
+            <th className="px-4 py-2 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">합계 금액</th>
+            <th className="px-4 py-2 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">비율 (%)</th>
+          </tr>
+        </thead>
+        <tbody className="bg-gray-800 divide-y divide-gray-700">
+          {categorySummary.map(({ category, total, percentage }) => (
+            <tr key={category} className="hover:bg-gray-700">
+              <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-200">{category}</td>
+              <td className="px-4 py-2 whitespace-nowrap text-sm text-right text-red-400">{formatAsUSD(total)}</td>
+              <td className="px-4 py-2 whitespace-nowrap text-sm text-right text-gray-200">{percentage.toFixed(2)}%</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+// --- ⬆️ 기존 컴포넌트 (선택된 월 카테고리 요약) ⬆️ ---
+
+
 /**
  * 월별 상세 경비 보고서 페이지
  */
 export default function ReportDetailPage() {
   const [transactions, setTransactions] = useState([]);
-  const [availableMonths, setAvailableMonths] = useState([]);
-  const [selectedMonth, setSelectedMonth] = useState('');
+  const [availableMonths, setAvailableMonths] = useState([]); // "YYYY-MM" 형식 저장
+  const [selectedMonth, setSelectedMonth] = useState(''); // 선택된 "YYYY-MM" 형식 저장
+  // --- ⬇️ 새로운 state 추가 (연도 필터용) ⬇️ ---
+  const [availableYears, setAvailableYears] = useState([]); // 요약용 연도 목록
+  const [selectedBreakdownYear, setSelectedBreakdownYear] = useState(''); // 요약용 선택된 연도
+  // --- ⬆️ 새로운 state 추가 (연도 필터용) ⬆️ ---
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -41,9 +156,44 @@ export default function ReportDetailPage() {
         return;
       }
 
-      setTransactions(data);
+      // 날짜 유효성 검사 및 변환 추가 (초기 로드 시)
+      const validTransactions = data.map(t => {
+          const dateObj = new Date(t.Date);
+          if (dateObj instanceof Date && !isNaN(dateObj)) {
+              return {
+                  ...t,
+                  _dateObj: dateObj,
+                  _monthKey: `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`,
+                  // --- ⬇️ 연도 정보 추가 ⬇️ ---
+                  _year: dateObj.getFullYear().toString() // 연도 문자열 저장
+                  // --- ⬆️ 연도 정보 추가 ⬆️ ---
+              };
+          }
+          return null;
+      }).filter(Boolean);
 
-      const months = [...new Set(data.map(t => t.MONTH))].filter(Boolean).sort((a, b) => b.localeCompare(a));
+
+      setTransactions(validTransactions);
+
+      // --- ⬇️ 연도 목록 추출 로직 추가 ⬇️ ---
+      // 요약 테이블용 연도 목록 추출 및 정렬 (최신순)
+      const years = [...new Set(validTransactions.map(t => t._year))]
+                     .sort((a, b) => b.localeCompare(a));
+      setAvailableYears(years);
+      // 최신 연도 기본 선택
+      if (years.length > 0) {
+        setSelectedBreakdownYear(years[0]);
+      } else {
+        // 데이터가 없을 경우 현재 연도 설정
+        setSelectedBreakdownYear(new Date().getFullYear().toString());
+      }
+      // --- ⬆️ 연도 목록 추출 로직 추가 ⬆️ ---
+
+
+      // "YYYY-MM" 형식 추출 및 정렬 (기존 월 선택용)
+      const months = [...new Set(validTransactions.map(t => t._monthKey))]
+                     .sort((a, b) => b.localeCompare(a));
+
       setAvailableMonths(months);
 
       if (months.length > 0) {
@@ -54,42 +204,128 @@ export default function ReportDetailPage() {
     loadData();
   }, []);
 
-  // 2. 선택된 월이 변경될 때마다 데이터를 필터링하고 그룹화하며 월별 총합계를 계산합니다.
+  // --- ⬇️ 모든 월별 카테고리 분석 로직 (기존 유지) ⬇️ ---
+  const allMonthsBreakdown = useMemo(() => {
+      // ... (기존 allMonthsBreakdown 계산 로직 유지) ...
+       if (transactions.length === 0) {
+          return {};
+      }
+       const monthlyData = {};
+       transactions.forEach(t => {
+          if (t.Div !== 'Expense' || !t._monthKey) return;
+           const monthKey = t._monthKey;
+          const category = t.Category || '기타';
+          const amount = parseFloat(String(t.Amount).replace(/[^0-9.-]+/g, '')) || 0;
+           if (!monthlyData[monthKey]) {
+              monthlyData[monthKey] = { categoriesMap: {}, total: 0 };
+          }
+           if (!monthlyData[monthKey].categoriesMap[category]) {
+              monthlyData[monthKey].categoriesMap[category] = 0;
+          }
+           monthlyData[monthKey].categoriesMap[category] += amount;
+          monthlyData[monthKey].total += amount;
+      });
+       Object.keys(monthlyData).forEach(monthKey => {
+          const monthInfo = monthlyData[monthKey];
+          const monthTotal = monthInfo.total;
+           monthlyData[monthKey].categories = Object.entries(monthInfo.categoriesMap)
+              .map(([category, amount]) => ({
+                  category,
+                  amount,
+                  percentage: monthTotal !== 0 ? (amount / monthTotal) * 100 : 0,
+              }))
+              .sort((a, b) => b.amount - a.amount);
+           delete monthlyData[monthKey].categoriesMap;
+      });
+       return monthlyData;
+  }, [transactions]);
+  // --- ⬆️ 모든 월별 카테고리 분석 로직 (기존 유지) ⬆️ ---
+
+  // 2. 선택된 월이 변경될 때마다 데이터를 필터링하고 그룹화하며 월별 총합계를 계산합니다. (기존 로직 유지)
   const { groupedData, monthlyTotal } = useMemo(() => {
-    if (!selectedMonth || transactions.length === 0) {
+    // ... (기존 groupedData, monthlyTotal 계산 로직 유지) ...
+     if (!selectedMonth || transactions.length === 0) {
       return { groupedData: {}, monthlyTotal: 0 };
-    }
-
-    const filtered = transactions.filter(t => t.MONTH === selectedMonth && t.Div === 'Expense');
-
-    const grouped = filtered.reduce((acc, t) => {
+     }
+     const filtered = transactions.filter(t => t._monthKey === selectedMonth && t.Div === 'Expense');
+     const grouped = filtered.reduce((acc, t) => {
+      const amount = parseFloat(String(t.Amount).replace(/[^0-9.-]+/g, '')) || 0;
       const category = t.Category || '기타';
       if (!acc[category]) {
-        acc[category] = [];
+        acc[category] = { transactions: [], total: 0 };
       }
-      acc[category].push(t);
+      acc[category].transactions.push(t);
+      acc[category].total += amount;
       return acc;
     }, {});
-
-    const total = filtered.reduce((sum, t) => sum + (parseFloat(String(t.Amount).replace(/[^0-9.-]+/g, '')) || 0), 0);
-
-    return { groupedData: grouped, monthlyTotal: total };
+     const total = filtered.reduce((sum, t) => sum + (parseFloat(String(t.Amount).replace(/[^0-9.-]+/g, '')) || 0), 0);
+     return { groupedData: grouped, monthlyTotal: total };
   }, [transactions, selectedMonth]);
 
- 
+  // 3. 카테고리별 요약 데이터 계산 (선택된 월 기준) (기존 로직 유지)
+  const categorySummaryData = useMemo(() => {
+    // ... (기존 categorySummaryData 계산 로직 유지) ...
+     if (Object.keys(groupedData).length === 0) {
+      return [];
+    }
+     return Object.entries(groupedData)
+      .map(([category, data]) => ({
+        category,
+        total: data.total,
+        percentage: monthlyTotal !== 0 ? (data.total / monthlyTotal) * 100 : 0,
+      }))
+      .sort((a, b) => b.total - a.total);
+  }, [groupedData, monthlyTotal]);
 
-  // ⚠️ 가정: 상위 컴포넌트나 globals.css에서 배경색을 검정색으로 설정했다고 가정합니다.
+
   return (
-    <> {/* Use Fragment to wrap NavBar and page content */}
+    <>
       <ProtectedPage>
-      <div className="p-8 mx-auto mt-10 text-white"> {/* 기본 텍스트 색상을 흰색으로 설정 */}
-        {/* 제목 스타일 변경 (text-white 추가) */}
+      <div className="p-8 mx-auto mt-10 text-white">
         <h1 className="text-4xl font-extrabold mb-8 text-white border-b border-gray-700 pb-4">월별 상세 경비 보고서</h1>
+
+        {/* --- ⬇️ 모든 월별 요약 섹션 수정 ⬇️ --- */}
+        <div className="mb-8"> {/* 섹션 묶기 */}
+            {/* ⚠️ 수정: 제목과 드롭다운 레이아웃 변경 */}
+            <h2 className="text-2xl font-semibold text-white mb-2">연도별 카테고리 월별 지출</h2>
+            {/* 연도 선택 드롭다운 (제목 아래, 왼쪽 정렬) */}
+            {!isLoading && availableYears.length > 0 && (
+                <div className="max-w-xs mb-4"> {/* mb-4 추가 */}
+                    <label htmlFor="breakdown-year-select" className="block text-sm font-semibold text-white mb-1">
+                        연도 선택:
+                    </label>
+                    <select
+                        id="breakdown-year-select"
+                        value={selectedBreakdownYear}
+                        onChange={(e) => setSelectedBreakdownYear(e.target.value)}
+                        className="block w-full py-2 px-3 border border-gray-600 bg-gray-700 text-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    >
+                        {availableYears.map(year => (
+                            <option key={year} value={year}>{year}</option>
+                        ))}
+                    </select>
+                </div>
+            )}
+            {/* 월별 요약 테이블 렌더링 */}
+            {isLoading ? (
+                <div className="text-center text-gray-400 py-4">데이터 로딩 중...</div>
+            ) : (
+                <MonthlyCategoryBreakdown
+                    monthlyBreakdownData={allMonthsBreakdown}
+                    selectedYear={selectedBreakdownYear} // 선택된 연도 전달
+                />
+            )}
+        </div>
+        {/* --- ⬆️ 모든 월별 요약 섹션 수정 ⬆️ --- */}
+
+
+        {/* --- ⬇️ 선택된 월 보고서 섹션 (기존 유지) ⬇️ --- */}
+        <hr className="border-gray-700 my-8"/> {/* 구분선 추가 */}
+        <h2 className="text-2xl font-semibold mb-4 text-white">{selectedMonth} 상세 보고서</h2>
 
         {/* 월 선택 및 월별 총합계 표시 */}
         <div className="flex items-end mb-6 space-x-4">
           <div className="max-w-xs">
-            {/* 레이블 스타일 변경 (text-white 추가) */}
             <label htmlFor="month-select" className="block text-sm font-semibold text-white mb-1">
               보고서 월 선택:
             </label>
@@ -97,7 +333,6 @@ export default function ReportDetailPage() {
               id="month-select"
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
-              // 드롭다운 배경/테두리/텍스트 색상 조정 (어두운 배경용)
               className="block w-full py-2 px-3 border border-gray-600 bg-gray-700 text-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
             >
               {availableMonths.map(month => (
@@ -105,31 +340,35 @@ export default function ReportDetailPage() {
               ))}
             </select>
           </div>
-          {/* 월별 총합계 표시 */}
           <div className="pb-1">
-              {/* 텍스트 색상 변경 (text-white 추가) */}
               <span className="text-sm font-semibold text-white">Monthly Total: </span>
-              {/* 총합계는 강조를 위해 밝은 빨간색 유지 */}
               <span className="text-lg font-bold text-red-400">{formatAsUSD(monthlyTotal)}</span>
           </div>
         </div>
 
-        {/* 선택된 월의 상세 보고서 데이터 */}
+        {/* 선택된 월 카테고리 요약 테이블 */}
+        {isLoading ? (
+             <div className="text-center text-gray-400 py-4">데이터 로딩 중...</div>
+        ) : (
+             <CategorySummaryTable categorySummary={categorySummaryData} monthlyTotal={monthlyTotal} />
+        )}
+
+        {/* 선택된 월의 상세 내역 */}
+        <h2 className="text-2xl font-semibold mt-6 mb-4 text-white">{selectedMonth} 상세 내역</h2>
         <div className="space-y-6">
-          {Object.keys(groupedData).length > 0 ? (
-              Object.keys(groupedData).sort().map(category => (
-                // 카드 배경/테두리 색상 조정 (어두운 배경용)
+          {categorySummaryData.length > 0 ? (
+              categorySummaryData.map(({ category }) => (
                 <div key={category} className="bg-gray-800 p-6 shadow-xl rounded-lg border border-gray-700">
-                  {/* 카테고리 제목 색상 변경 */}
                   <h2 className="text-2xl font-semibold mb-4 text-indigo-400">{category}</h2>
-                  {/* CategoryDetailTable은 하위 컴포넌트이므로, 내부 스타일도 조정해야 할 수 있습니다. */}
-                  <CategoryDetailTable transactions={groupedData[category]} />
+                  <CategoryDetailTable transactions={groupedData[category].transactions} />
                 </div>
               ))
           ) : (
-              <div className="text-center text-gray-400">선택된 월에 지출 내역이 없습니다.</div>
+              !isLoading && <div className="text-center text-gray-400">선택된 월에 지출 내역이 없습니다.</div>
           )}
         </div>
+        {/* --- ⬆️ 선택된 월 보고서 섹션 (기존 유지) ⬆️ --- */}
+
       </div>
       </ProtectedPage>
     </>
@@ -137,10 +376,10 @@ export default function ReportDetailPage() {
 }
 
 /**
- * 카테고리별 상세 내역을 표시하는 테이블 컴포넌트 (Payee 그룹화 및 소계 추가)
- * ⚠️ 가정: 상위 컴포넌트가 어두운 배경이므로 테이블 스타일 조정
+ * 카테고리별 상세 내역을 표시하는 테이블 컴포넌트 (기존 유지)
  */
 function CategoryDetailTable({ transactions }) {
+    // ... (기존 CategoryDetailTable 코드 유지) ...
     // 1. Payee를 기준으로 transactions 그룹화
     const groupedByPayee = transactions.reduce((acc, t) => {
       const payee = t.Payees || '기타 Payee';
@@ -162,57 +401,57 @@ function CategoryDetailTable({ transactions }) {
     return (
          <div className="overflow-x-auto">
              <table className="min-w-full divide-y divide-gray-700">
-                <thead className="bg-gray-700">
-                    <tr>
-                        <th className="px-4 py-2 text-left text-sm font-medium text-gray-300 uppercase tracking-wider">Payee</th>
-                        <th className="px-4 py-2 text-right text-sm font-medium text-gray-300 uppercase tracking-wider">Amount</th>
-                        <th className="px-4 py-2 text-right text-sm font-medium text-gray-300 uppercase tracking-wider">CASH</th>
-                        <th className="px-4 py-2 text-right text-sm font-medium text-gray-300 uppercase tracking-wider">TOTAL</th>
-                        <th className="px-4 py-2 text-left text-sm font-medium text-gray-300 uppercase tracking-wider">Date</th>
-                        <th className="px-4 py-2 text-left text-sm font-medium text-gray-300 uppercase tracking-wider">Concept</th>
-                    </tr>
-                </thead>
-                <tbody className="bg-gray-800 divide-y divide-gray-700">
-                    {/* Fragment에 key prop 추가 */}
-                    {sortedPayees.map(payee => {
-                        const payeeTransactions = groupedByPayee[payee];
-                        const payeeSubtotalAmount = payeeTransactions.reduce((sum, t) => sum + (parseFloat(String(t.Amount).replace(/[^0-9.-]+/g, '')) || 0), 0);
-                        const payeeSubtotalCash = payeeTransactions.reduce((sum, t) => sum + (parseFloat(String(t.CASH).replace(/[^0-9.-]+/g, '')) || 0), 0);
+                 <thead className="bg-gray-700">
+                     <tr>
+                         <th className="px-4 py-2 text-left text-sm font-medium text-gray-300 uppercase tracking-wider">Payee</th>
+                         <th className="px-4 py-2 text-right text-sm font-medium text-gray-300 uppercase tracking-wider">Amount</th>
+                         <th className="px-4 py-2 text-right text-sm font-medium text-gray-300 uppercase tracking-wider">CASH</th>
+                         <th className="px-4 py-2 text-right text-sm font-medium text-gray-300 uppercase tracking-wider">TOTAL</th>
+                         <th className="px-4 py-2 text-left text-sm font-medium text-gray-300 uppercase tracking-wider">Date</th>
+                         <th className="px-4 py-2 text-left text-sm font-medium text-gray-300 uppercase tracking-wider">Concept</th>
+                     </tr>
+                 </thead>
+                 <tbody className="bg-gray-800 divide-y divide-gray-700">
+                     {/* Fragment에 key prop 추가 */}
+                     {sortedPayees.map(payee => {
+                         const payeeTransactions = groupedByPayee[payee];
+                         const payeeSubtotalAmount = payeeTransactions.reduce((sum, t) => sum + (parseFloat(String(t.Amount).replace(/[^0-9.-]+/g, '')) || 0), 0);
+                         const payeeSubtotalCash = payeeTransactions.reduce((sum, t) => sum + (parseFloat(String(t.CASH).replace(/[^0-9.-]+/g, '')) || 0), 0);
 
-                        return (
-                            // 수정: Fragment에 고유한 key prop (payee 이름) 추가
-                            <React.Fragment key={payee}>
-                                {payeeTransactions.map(t => (
-                                    <tr key={t.__rowIndex} className="hover:bg-gray-700">
-                                        <td className="px-4 py-2 text-sm text-gray-200 whitespace-nowrap">{t.Payees}</td>
-                                        <td className="px-4 py-2 text-sm text-gray-200 text-right whitespace-nowrap">{formatAsUSD(t.Amount)}</td>
-                                        <td className="px-4 py-2 text-sm text-gray-200 text-right whitespace-nowrap">{formatAsUSD(t.CASH)}</td>
-                                        <td className="px-4 py-2 text-sm text-gray-200 text-right whitespace-nowrap">{formatAsUSD(t.TOTAL)}</td>
-                                        <td className="px-4 py-2 text-sm text-gray-200 whitespace-nowrap">{t.Date}</td>
-                                        <td className="px-4 py-2 text-sm text-gray-200">{t.Concept}</td>
-                                    </tr>
-                                ))}
-                                <tr className="bg-gray-700 border-t border-gray-600">
-                                    <td className="px-4 py-2 text-sm font-semibold text-gray-400 text-right italic">Subtotal for {payee}</td>
-                                    <td className="px-4 py-2 text-sm font-semibold text-gray-200 text-right italic">{formatAsUSD(payeeSubtotalAmount)}</td>
-                                    <td className="px-4 py-2 text-sm font-semibold text-gray-200 text-right italic">{formatAsUSD(payeeSubtotalCash)}</td>
-                                    <td colSpan="3"></td>
-                                </tr>
-                            </React.Fragment> // 수정: Fragment 닫기 (명시적으로 React.Fragment 사용)
-                        );
-                    })}
-                </tbody>
-                <tfoot className="bg-gray-700 border-t-2 border-gray-600">
-                    <tr>
-                        <td className="px-4 py-2 text-sm font-bold text-gray-200">Category Total</td>
-                        <td className="px-4 py-2 text-sm font-bold text-gray-200 text-right">{formatAsUSD(categoryTotal)}</td>
-                        <td className="px-4 py-2 text-sm font-bold text-gray-200 text-right">{formatAsUSD(cashTotal)}</td>
-                        <td className="px-4 py-2 text-sm font-bold text-gray-200 text-right">{formatAsUSD(totalTotal)}</td>
-                        <td colSpan="2"></td>
-                    </tr>
-                </tfoot>
-             </table>
-         </div>
+                         return (
+                             // 수정: Fragment에 고유한 key prop (payee 이름) 추가
+                             <React.Fragment key={payee}>
+                                 {payeeTransactions.map(t => (
+                                     <tr key={t.__rowIndex} className="hover:bg-gray-700">
+                                         <td className="px-4 py-2 text-sm text-gray-200 whitespace-nowrap">{t.Payees}</td>
+                                         <td className="px-4 py-2 text-sm text-gray-200 text-right whitespace-nowrap">{formatAsUSD(t.Amount)}</td>
+                                         <td className="px-4 py-2 text-sm text-gray-200 text-right whitespace-nowrap">{formatAsUSD(t.CASH)}</td>
+                                         <td className="px-4 py-2 text-sm text-gray-200 text-right whitespace-nowrap">{formatAsUSD(t.TOTAL)}</td>
+                                         <td className="px-4 py-2 text-sm text-gray-200 whitespace-nowrap">{t.Date}</td>
+                                         <td className="px-4 py-2 text-sm text-gray-200">{t.Concept}</td>
+                                     </tr>
+                                 ))}
+                                 <tr className="bg-gray-700 border-t border-gray-600">
+                                     <td className="px-4 py-2 text-sm font-semibold text-gray-400 text-right italic">Subtotal for {payee}</td>
+                                     <td className="px-4 py-2 text-sm font-semibold text-gray-200 text-right italic">{formatAsUSD(payeeSubtotalAmount)}</td>
+                                     <td className="px-4 py-2 text-sm font-semibold text-gray-200 text-right italic">{formatAsUSD(payeeSubtotalCash)}</td>
+                                     <td colSpan="3"></td>
+                                 </tr>
+                             </React.Fragment> // 수정: Fragment 닫기 (명시적으로 React.Fragment 사용)
+                         );
+                     })}
+                 </tbody>
+                 <tfoot className="bg-gray-700 border-t-2 border-gray-600">
+                     <tr>
+                         <td className="px-4 py-2 text-sm font-bold text-gray-200">Category Total</td>
+                         <td className="px-4 py-2 text-sm font-bold text-gray-200 text-right">{formatAsUSD(categoryTotal)}</td>
+                         <td className="px-4 py-2 text-sm font-bold text-gray-200 text-right">{formatAsUSD(cashTotal)}</td>
+                         <td className="px-4 py-2 text-sm font-bold text-gray-200 text-right">{formatAsUSD(totalTotal)}</td>
+                         <td colSpan="2"></td>
+                     </tr>
+                 </tfoot>
+            </table>
+        </div>
     );
 }
 
