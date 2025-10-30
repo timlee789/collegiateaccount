@@ -24,80 +24,6 @@ function formatAsUSD(value) {
 }
 
 
-// --- ⬇️ 각 월별 카테고리 요약 컴포넌트 ⬇️ ---
-function MonthlyCategoryBreakdown({ monthlyBreakdownData, selectedYear }) {
-  if (!monthlyBreakdownData || Object.keys(monthlyBreakdownData).length === 0) {
-    return null; // 데이터 없으면 표시 안 함
-  }
-
-  // 최신 월 순서대로 정렬된 월 목록 가져오기 & 선택된 연도로 필터링
-  const sortedMonths = Object.keys(monthlyBreakdownData)
-                         .filter(month => month.startsWith(selectedYear + '-')) // 선택된 연도 필터링
-                         .sort((a, b) => b.localeCompare(a)); // 최신 월 순서
-
-  // 필터링된 월 데이터가 없으면 표시 안 함
-  if (sortedMonths.length === 0) {
-      return <div className="text-center text-gray-400 py-4 col-span-1 md:col-span-3 lg:col-span-6">선택된 연도({selectedYear})에 데이터가 없습니다.</div>;
-  }
-
-  return (
-    <div className="mb-8"> {/* 전체 섹션 아래 마진 */}
-      {/* 각 월별로 테이블 생성 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        {sortedMonths.map(month => {
-          const categories = monthlyBreakdownData[month].categories;
-          const monthTotal = monthlyBreakdownData[month].total;
-
-          if (!categories || categories.length === 0 || monthTotal === 0) {
-            return null;
-          }
-          return (
-            <div key={month} className="bg-gray-800 shadow-md rounded-lg border border-gray-700 overflow-hidden text-sm">
-              <h3 className="px-3 py-2 bg-gray-700 font-semibold text-gray-200">{month}</h3>
-              <table className="w-full">
-                <thead className="bg-gray-600">
-                  <tr>
-                    {/* ⚠️ 수정: 패딩 줄임 (px-2 -> px-1), 최대 너비 설정 */}
-                    <th className="px-1 py-1 text-left text-xs font-medium text-gray-300 uppercase tracking-wider max-w-[80px] truncate">카테고리</th>
-                    {/* ⚠️ 수정: 패딩 줄임 (px-2 -> px-1) */}
-                    <th className="px-1 py-1 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">비용</th>
-                    {/* ⚠️ 수정: 패딩 줄임 (px-2 -> px-1) */}
-                    <th className="px-1 py-1 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">%</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-700">
-                  {categories.map(({ category, amount, percentage }) => (
-                    <tr key={category} className="hover:bg-gray-700">
-                      {/* ⚠️ 수정: 패딩 줄임 (px-2 -> px-1), 최대 너비 설정, 내용 줄바꿈 허용 */}
-                      <td className="px-1 py-1 text-gray-200 max-w-[80px] break-words">{category}</td>
-                      {/* ⚠️ 수정: 패딩 줄임 (px-2 -> px-1) */}
-                      <td className="px-1 py-1 whitespace-nowrap text-right text-red-400">{formatAsUSD(amount)}</td>
-                      {/* ⚠️ 수정: 패딩 줄임 (px-2 -> px-1), whitespace-nowrap 제거 */}
-                      <td className="px-1 py-1 text-right text-gray-200">{percentage.toFixed(1)}%</td>
-                    </tr>
-                  ))}
-                </tbody>
-                 <tfoot className="bg-gray-700 border-t-2 border-gray-600">
-                    <tr>
-                         {/* ⚠️ 수정: 패딩 줄임 (px-2 -> px-1) */}
-                         <td className="px-1 py-1 font-bold text-gray-300 text-right">월 합계</td>
-                         {/* ⚠️ 수정: 패딩 줄임 (px-2 -> px-1) */}
-                         <td className="px-1 py-1 font-bold text-red-300 text-right">{formatAsUSD(monthTotal)}</td>
-                         {/* ⚠️ 수정: 패딩 줄임 (px-2 -> px-1) */}
-                         <td className="px-1 py-1 font-bold text-gray-300 text-right">100.0%</td>
-                    </tr>
-                 </tfoot>
-              </table>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-// --- ⬆️ 각 월별 카테고리 요약 컴포넌트 ⬆️ ---
-
-
 // --- ⬇️ 기존 컴포넌트 (선택된 월 카테고리 요약) ⬇️ ---
 function CategorySummaryTable({ categorySummary, monthlyTotal }) {
   // ... (기존 CategorySummaryTable 코드 유지) ...
@@ -137,10 +63,10 @@ export default function ReportDetailPage() {
   const [transactions, setTransactions] = useState([]);
   const [availableMonths, setAvailableMonths] = useState([]); // "YYYY-MM" 형식 저장
   const [selectedMonth, setSelectedMonth] = useState(''); // 선택된 "YYYY-MM" 형식 저장
-  // --- ⬇️ 새로운 state 추가 (연도 필터용) ⬇️ ---
-  const [availableYears, setAvailableYears] = useState([]); // 요약용 연도 목록
-  const [selectedBreakdownYear, setSelectedBreakdownYear] = useState(''); // 요약용 선택된 연도
-  // --- ⬆️ 새로운 state 추가 (연도 필터용) ⬆️ ---
+  // --- ⬇️ "연도별 카테고리 요약" 관련 state 제거 ⬇️ ---
+  // const [availableYears, setAvailableYears] = useState([]); 
+  // const [selectedBreakdownYear, setSelectedBreakdownYear] = useState('');
+  // --- ⬆️ "연도별 카테고리 요약" 관련 state 제거 ⬆️ ---
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -164,9 +90,9 @@ export default function ReportDetailPage() {
                   ...t,
                   _dateObj: dateObj,
                   _monthKey: `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`,
-                  // --- ⬇️ 연도 정보 추가 ⬇️ ---
-                  _year: dateObj.getFullYear().toString() // 연도 문자열 저장
-                  // --- ⬆️ 연도 정보 추가 ⬆️ ---
+                  // --- ⬇️ _year 속성 제거 ⬇️ ---
+                  // _year: dateObj.getFullYear().toString() 
+                  // --- ⬆️ _year 속성 제거 ⬆️ ---
               };
           }
           return null;
@@ -175,19 +101,16 @@ export default function ReportDetailPage() {
 
       setTransactions(validTransactions);
 
-      // --- ⬇️ 연도 목록 추출 로직 추가 ⬇️ ---
-      // 요약 테이블용 연도 목록 추출 및 정렬 (최신순)
-      const years = [...new Set(validTransactions.map(t => t._year))]
-                     .sort((a, b) => b.localeCompare(a));
-      setAvailableYears(years);
-      // 최신 연도 기본 선택
-      if (years.length > 0) {
-        setSelectedBreakdownYear(years[0]);
-      } else {
-        // 데이터가 없을 경우 현재 연도 설정
-        setSelectedBreakdownYear(new Date().getFullYear().toString());
-      }
-      // --- ⬆️ 연도 목록 추출 로직 추가 ⬆️ ---
+      // --- ⬇️ "연도별 카테고리 요약" 관련 연도 추출 로직 제거 ⬇️ ---
+      // const years = [...new Set(validTransactions.map(t => t._year))]
+      //                .sort((a, b) => b.localeCompare(a));
+      // setAvailableYears(years);
+      // if (years.length > 0) {
+      //   setSelectedBreakdownYear(years[0]);
+      // } else {
+      //   setSelectedBreakdownYear(new Date().getFullYear().toString());
+      // }
+      // --- ⬆️ "연도별 카테고리 요약" 관련 연도 추출 로직 제거 ⬆️ ---
 
 
       // "YYYY-MM" 형식 추출 및 정렬 (기존 월 선택용)
@@ -204,42 +127,11 @@ export default function ReportDetailPage() {
     loadData();
   }, []);
 
-  // --- ⬇️ 모든 월별 카테고리 분석 로직 (기존 유지) ⬇️ ---
-  const allMonthsBreakdown = useMemo(() => {
-      // ... (기존 allMonthsBreakdown 계산 로직 유지) ...
-       if (transactions.length === 0) {
-          return {};
-      }
-       const monthlyData = {};
-       transactions.forEach(t => {
-          if (t.Div !== 'Expense' || !t._monthKey) return;
-           const monthKey = t._monthKey;
-          const category = t.Category || '기타';
-          const amount = parseFloat(String(t.Amount).replace(/[^0-9.-]+/g, '')) || 0;
-           if (!monthlyData[monthKey]) {
-              monthlyData[monthKey] = { categoriesMap: {}, total: 0 };
-          }
-           if (!monthlyData[monthKey].categoriesMap[category]) {
-              monthlyData[monthKey].categoriesMap[category] = 0;
-          }
-           monthlyData[monthKey].categoriesMap[category] += amount;
-          monthlyData[monthKey].total += amount;
-      });
-       Object.keys(monthlyData).forEach(monthKey => {
-          const monthInfo = monthlyData[monthKey];
-          const monthTotal = monthInfo.total;
-           monthlyData[monthKey].categories = Object.entries(monthInfo.categoriesMap)
-              .map(([category, amount]) => ({
-                  category,
-                  amount,
-                  percentage: monthTotal !== 0 ? (amount / monthTotal) * 100 : 0,
-              }))
-              .sort((a, b) => b.amount - a.amount);
-           delete monthlyData[monthKey].categoriesMap;
-      });
-       return monthlyData;
-  }, [transactions]);
-  // --- ⬆️ 모든 월별 카테고리 분석 로직 (기존 유지) ⬆️ ---
+  // --- ⬇️ "모든 월별 카테고리 분석" 로직 제거 ⬇️ ---
+  // const allMonthsBreakdown = useMemo(() => {
+  // ... (관련 로직 모두 제거됨) ...
+  // }, [transactions]);
+  // --- ⬆️ "모든 월별 카테고리 분석" 로직 제거 ⬆️ ---
 
   // 2. 선택된 월이 변경될 때마다 데이터를 필터링하고 그룹화하며 월별 총합계를 계산합니다. (기존 로직 유지)
   const { groupedData, monthlyTotal } = useMemo(() => {
@@ -284,43 +176,13 @@ export default function ReportDetailPage() {
       <div className="p-8 mx-auto mt-10 text-white">
         <h1 className="text-4xl font-extrabold mb-8 text-white border-b border-gray-700 pb-4">월별 상세 경비 보고서</h1>
 
-        {/* --- ⬇️ 모든 월별 요약 섹션 수정 ⬇️ --- */}
-        <div className="mb-8"> {/* 섹션 묶기 */}
-            {/* ⚠️ 수정: 제목과 드롭다운 레이아웃 변경 */}
-            <h2 className="text-2xl font-semibold text-white mb-2">연도별 카테고리 월별 지출</h2>
-            {/* 연도 선택 드롭다운 (제목 아래, 왼쪽 정렬) */}
-            {!isLoading && availableYears.length > 0 && (
-                <div className="max-w-xs mb-4"> {/* mb-4 추가 */}
-                    <label htmlFor="breakdown-year-select" className="block text-sm font-semibold text-white mb-1">
-                        연도 선택:
-                    </label>
-                    <select
-                        id="breakdown-year-select"
-                        value={selectedBreakdownYear}
-                        onChange={(e) => setSelectedBreakdownYear(e.target.value)}
-                        className="block w-full py-2 px-3 border border-gray-600 bg-gray-700 text-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                    >
-                        {availableYears.map(year => (
-                            <option key={year} value={year}>{year}</option>
-                        ))}
-                    </select>
-                </div>
-            )}
-            {/* 월별 요약 테이블 렌더링 */}
-            {isLoading ? (
-                <div className="text-center text-gray-400 py-4">데이터 로딩 중...</div>
-            ) : (
-                <MonthlyCategoryBreakdown
-                    monthlyBreakdownData={allMonthsBreakdown}
-                    selectedYear={selectedBreakdownYear} // 선택된 연도 전달
-                />
-            )}
-        </div>
-        {/* --- ⬆️ 모든 월별 요약 섹션 수정 ⬆️ --- */}
+        {/* --- ⬇️ "모든 월별 요약 섹션" 렌더링 코드 제거 ⬇️ --- */}
+        {/* <div className="mb-8"> ... </div> */}
+        {/* --- ⬆️ "모든 월별 요약 섹션" 렌더링 코드 제거 ⬆️ --- */}
 
 
         {/* --- ⬇️ 선택된 월 보고서 섹션 (기존 유지) ⬇️ --- */}
-        <hr className="border-gray-700 my-8"/> {/* 구분선 추가 */}
+        {/* <hr className="border-gray-700 my-8"/> */} {/* 구분선 제거 */}
         <h2 className="text-2xl font-semibold mb-4 text-white">{selectedMonth} 상세 보고서</h2>
 
         {/* 월 선택 및 월별 총합계 표시 */}
