@@ -7,34 +7,47 @@ import { getAccountingData, getSalesData } from '../actions/accounting';
 import TableClientRenderer from './TableClientRenderer'; // Import the client component
 import ProtectedPage from '../components/ProtectedPage';
 
-// --- ⬇️ 새로운 컴포넌트 추가 ⬇️ ---
-// 모든 월별 요약을 표시하는 테이블 컴포넌트
+// --- ⬇️ "전체 월별 요약" 테이블 수정 ⬇️ ---
 function MonthlySummaryTable({ summaryData }) {
   if (!summaryData || summaryData.length === 0) {
     return <div className="text-center text-gray-400 py-4">월별 요약 데이터가 없습니다.</div>;
   }
 
   return (
-    // 가로 넓이를 제한하고 중앙 정렬 (max-w-3xl mx-auto)
-    // 간격 수정: mb-6
-    <div className="max-w-3xl mx-auto overflow-x-auto bg-gray-800 shadow-md rounded-lg border border-gray-700 mb-6">
+    // ⚠️ 수정: 6열이 되므로 max-w-5xl로 너비 확장
+    <div className="max-w-5xl mx-auto overflow-x-auto bg-gray-800 shadow-md rounded-lg border border-gray-700 mb-6">
       <table className="w-full divide-y divide-gray-700">
         <thead className="bg-gray-700">
           <tr>
             <th className="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">월 (YYYY-MM)</th>
-            <th className="px-4 py-2 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">월 수입</th>
+            <th className="px-4 py-2 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">월 매출</th>
+            <th className="px-4 py-2 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">Deposit</th>
+            {/* ⚠️ 수정: "Cash" 열 추가 */}
+            <th className="px-4 py-2 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">Cash</th>
             <th className="px-4 py-2 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">월 지출</th>
-            <th className="px-4 py-2 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">월 순이익</th>
+            {/* ⚠️ 수정: "월 순이익" -> "공식수익" */}
+            <th className="px-4 py-2 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">공식수익</th>
+            {/* ⚠️ 수정: "비공식수익" 열 추가 */}
+            <th className="px-4 py-2 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">비공식수익</th>
           </tr>
         </thead>
         <tbody className="bg-gray-800 divide-y divide-gray-700">
-          {summaryData.map(({ month, totalRevenue, totalExpense, netIncome }) => (
+          {/* ⚠️ 수정: totalCash, officialNetIncome, unofficialNetIncome 구조분해 */}
+          {summaryData.map(({ month, totalRevenue, totalDeposit, totalCash, totalExpense, officialNetIncome, unofficialNetIncome }) => (
             <tr key={month} className="hover:bg-gray-700">
               <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-200">{month}</td>
               <td className="px-4 py-2 whitespace-nowrap text-sm text-right text-green-400">{formatAsUSD(totalRevenue)}</td>
+              <td className="px-4 py-2 whitespace-nowrap text-sm text-right text-yellow-400">{formatAsUSD(totalDeposit)}</td>
+              {/* ⚠️ 수정: "Cash" 값 표시 (청록색) */}
+              <td className="px-4 py-2 whitespace-nowrap text-sm text-right text-cyan-400">{formatAsUSD(totalCash)}</td>
               <td className="px-4 py-2 whitespace-nowrap text-sm text-right text-red-400">{formatAsUSD(totalExpense)}</td>
-              <td className={`px-4 py-2 whitespace-nowrap text-sm text-right ${netIncome >= 0 ? 'text-blue-400' : 'text-red-400'}`}>
-                {formatAsUSD(netIncome)}
+              {/* ⚠️ 수정: "공식수익" 표시 */}
+              <td className={`px-4 py-2 whitespace-nowrap text-sm text-right ${officialNetIncome >= 0 ? 'text-blue-400' : 'text-red-400'}`}>
+                {formatAsUSD(officialNetIncome)}
+              </td>
+              {/* ⚠️ 수정: "비공식수익" 표시 */}
+              <td className={`px-4 py-2 whitespace-nowrap text-sm text-right ${unofficialNetIncome >= 0 ? 'text-blue-400' : 'text-red-400'}`}>
+                {formatAsUSD(unofficialNetIncome)}
               </td>
             </tr>
           ))}
@@ -43,7 +56,7 @@ function MonthlySummaryTable({ summaryData }) {
     </div>
   );
 }
-// --- ⬆️ 새로운 컴포넌트 추가 ⬆️ ---
+// --- ⬆️ "전체 월별 요약" 테이블 수정 ⬆️ ---
 
 
 // StatCard 컴포넌트 정의
@@ -78,7 +91,6 @@ function parseCurrency(value) {
 
 
 export default function DashboardPage() {
-  // --- ⬇️ useState 정의 복원 ⬇️ ---
   const [allTransactions, setAllTransactions] = useState([]); // Store all expense transactions
   const [allSalesData, setAllSalesData] = useState([]); // Store all sales data
   const [headers, setHeaders] = useState([]); // Store expense headers
@@ -89,7 +101,6 @@ export default function DashboardPage() {
   const [sortConfig, setSortConfig] = useState({ key: 'Date', direction: 'descending' });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  // --- ⬆️ useState 정의 복원 ⬆️ ---
 
   // 1. 페이지 로드 시 전체 거래 내역, Sales 데이터, 헤더 가져오기
   useEffect(() => {
@@ -188,56 +199,68 @@ export default function DashboardPage() {
   };
   // --- ⬆️ 정렬 기능 추가 ⬆️ ---
 
-  // --- ⬇️ 모든 월별 요약 계산 로직 추가 ⬇️ ---
+  // --- ⬇️ 모든 월별 요약 계산 로직 수정 ⬇️ ---
   const allMonthsSummary = useMemo(() => {
     // 로딩 중이거나 데이터가 없으면 빈 배열 반환
     if (isLoading || (allTransactions.length === 0 && allSalesData.length === 0)) {
       return [];
     }
 
-    const monthlySummaries = {}; // 예: { '2025-10': { revenue: 0, expense: 0 }, ... }
+    const monthlySummaries = {}; // 예: { '2025-10': { revenue: 0, expense: 0, deposit: 0, cash: 0 }, ... }
 
     // 모든 Expense 데이터 순회
     allTransactions.forEach(t => {
-      if (!t || !t.Date || t.Div !== 'Expense') return; // 날짜 없거나 지출 아니면 건너뜀
+      if (!t || !t.Date || t.Div !== 'Expense') return; 
       const dateObj = new Date(t.Date);
-      if (!(dateObj instanceof Date && !isNaN(dateObj))) return; // 유효하지 않은 날짜 건너뜀
+      if (!(dateObj instanceof Date && !isNaN(dateObj))) return; 
 
       const monthKey = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
 
       if (!monthlySummaries[monthKey]) {
-        monthlySummaries[monthKey] = { totalRevenue: 0, totalExpense: 0 };
+        // ⚠️ 수정: totalDeposit, totalCash 초기화 추가
+        monthlySummaries[monthKey] = { totalRevenue: 0, totalExpense: 0, totalDeposit: 0, totalCash: 0 };
       }
       monthlySummaries[monthKey].totalExpense += parseCurrency(t.Amount);
     });
 
     // 모든 Sales 데이터 순회
     allSalesData.forEach(s => {
-      if (!s || !s.Date || !s.Total) return; // 날짜나 Total 없으면 건너뜀
+      // ⚠️ 수정: s.Cash도 확인
+      if (!s || !s.Date || (!s.Total && !s.Deposit && !s.Cash)) return; 
       const dateObj = new Date(s.Date);
-      if (!(dateObj instanceof Date && !isNaN(dateObj))) return; // 유효하지 않은 날짜 건너뜀
+      if (!(dateObj instanceof Date && !isNaN(dateObj))) return; 
 
       const monthKey = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
 
       if (!monthlySummaries[monthKey]) {
-        monthlySummaries[monthKey] = { totalRevenue: 0, totalExpense: 0 };
+        // ⚠️ 수정: totalDeposit, totalCash 초기화 추가
+        monthlySummaries[monthKey] = { totalRevenue: 0, totalExpense: 0, totalDeposit: 0, totalCash: 0 };
       }
+      // ⚠️ 수정: totalRevenue (매출), totalDeposit (입금), totalCash (현금)를 별도로 합산
       monthlySummaries[monthKey].totalRevenue += parseCurrency(s.Total);
+      monthlySummaries[monthKey].totalDeposit += parseCurrency(s.Deposit);
+      monthlySummaries[monthKey].totalCash += parseCurrency(s.Cash); // Cash 합산
     });
 
     // 객체를 배열로 변환하고 순이익 계산 및 정렬
     const summaryArray = Object.entries(monthlySummaries)
       .map(([month, totals]) => ({
         month,
-        ...totals,
-        netIncome: totals.totalRevenue - totals.totalExpense,
+        totalRevenue: totals.totalRevenue,
+        totalExpense: totals.totalExpense,
+        totalDeposit: totals.totalDeposit,
+        totalCash: totals.totalCash, // ⚠️ 수정: totalCash 전달
+        // ⚠️ 수정: "공식수익" (Deposit - Expense)
+        officialNetIncome: totals.totalDeposit - totals.totalExpense, 
+        // ⚠️ 수정: "비공식수익" ((Deposit + Cash) - Expense)
+        unofficialNetIncome: (totals.totalDeposit + totals.totalCash) - totals.totalExpense,
       }))
       .sort((a, b) => b.month.localeCompare(a.month)); // 최신 월 순서로 정렬
 
     return summaryArray;
 
   }, [allTransactions, allSalesData, isLoading]); // 로딩 상태도 의존성 배열에 추가
-  // --- ⬆️ 모든 월별 요약 계산 로직 추가 ⬆️ ---
+  // --- ⬆️ 모든 월별 요약 계산 로직 수정 ⬆️ ---
 
 
   // 3. 선택된 연도/월 기준으로 거래 내역 필터링 및 요약 계산
@@ -247,7 +270,8 @@ export default function DashboardPage() {
       console.log("Calculation skipped: No month selected or no data.");
       return {
         filteredTransactions: [],
-        selectedPeriodSummary: { totalRevenue: 0, totalExpense: 0, netIncome: 0 }
+        // ⚠️ 수정: totalDeposit, totalCash 추가
+        selectedPeriodSummary: { totalRevenue: 0, totalDeposit: 0, totalCash: 0, totalExpense: 0, officialNetIncome: 0, unofficialNetIncome: 0 }
       };
     }
 
@@ -304,18 +328,33 @@ export default function DashboardPage() {
     });
     console.log("Calculated Monthly Expense:", monthlyExpense);
 
-    // 필터링된 Sales 데이터 기반으로 해당 월의 수입(Total) 계산
+    // 필터링된 Sales 데이터 기반으로 해당 월의 수입(Total), Deposit, Cash 계산
     let monthlyRevenue = 0;
+    let monthlyDeposit = 0;
+    let monthlyCash = 0; // ⚠️ 수정: monthlyCash 변수 추가
     filteredSales.forEach(s => {
-        monthlyRevenue += parseCurrency(s.Total);
+      monthlyRevenue += parseCurrency(s.Total);
+      monthlyDeposit += parseCurrency(s.Deposit);
+      monthlyCash += parseCurrency(s.Cash); // ⚠️ 수정: Cash 합산
     });
     console.log("Calculated Monthly Revenue (Sales Total):", monthlyRevenue);
+    console.log("Calculated Monthly Deposit:", monthlyDeposit);
+    console.log("Calculated Monthly Cash:", monthlyCash); // ⚠️ 수정: Cash 로그 추가
 
-    const monthlyNetIncome = monthlyRevenue - monthlyExpense;
+    // ⚠️ 수정: 순이익 계산 변경
+    const officialNetIncome = monthlyDeposit - monthlyExpense; // 공식수익
+    const unofficialNetIncome = (monthlyDeposit + monthlyCash) - monthlyExpense; // 비공식수익
 
     return {
       filteredTransactions: sortedExpenses,
-      selectedPeriodSummary: { totalRevenue: monthlyRevenue, totalExpense: monthlyExpense, netIncome: monthlyNetIncome }
+      selectedPeriodSummary: { 
+        totalRevenue: monthlyRevenue, 
+        totalDeposit: monthlyDeposit,
+        totalCash: monthlyCash, // ⚠️ 수정: totalCash 전달
+        totalExpense: monthlyExpense, 
+        officialNetIncome: officialNetIncome, // ⚠️ 수정: 공식수익 전달
+        unofficialNetIncome: unofficialNetIncome // ⚠️ 수정: 비공식수익 전달
+      }
     };
   }, [allTransactions, allSalesData, selectedMonth, sortConfig]);
 
@@ -332,9 +371,9 @@ export default function DashboardPage() {
         {/* --- ⬇️ 모든 월별 요약 테이블 렌더링 추가 ⬇️ --- */}
         <h2 className="text-xl font-semibold text-white mt-2 mb-1">전체 월별 요약</h2>
         {isLoading ? (
-             <div className="text-center text-gray-400 py-4">데이터 로딩 중...</div>
+            <div className="text-center text-gray-400 py-4">데이터 로딩 중...</div>
         ) : (
-             <MonthlySummaryTable summaryData={allMonthsSummary} />
+            <MonthlySummaryTable summaryData={allMonthsSummary} />
         )}
         {/* --- ⬆️ 모든 월별 요약 테이블 렌더링 추가 ⬆️ --- */}
 
@@ -380,13 +419,29 @@ export default function DashboardPage() {
         </div>
 
         {/* 1. 선택된 월 재무 요약 섹션 */}
-        {/* ⚠️ 레이아웃 수정: 너비 제한 및 중앙 정렬 (max-w-3xl mx-auto) */}
-        <div className="max-w-3xl mx-auto mt-4">
+        {/* ⚠️ 레이아웃 수정: 5개 카드를 표시하기 위해 grid-cols-5 사용 */}
+        <div className="max-w-6xl mx-auto mt-4"> {/* ⚠️ 수정: max-w-4xl -> max-w-6xl */}
             <h2 className="text-xl font-semibold text-white">{selectedMonth} 요약</h2>
-            <div className="flex flex-col md:flex-row gap-1 mt-1">
-              <StatCard title="월 수입 (Sales Total)" value={formatAsUSD(selectedPeriodSummary.totalRevenue)} color="text-green-400" />
+            {/* ⚠️ 수정: 5-column grid로 변경, gap-2 */}
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-2 mt-1">
+              <StatCard title="월 매출 (Sales Total)" value={formatAsUSD(selectedPeriodSummary.totalRevenue)} color="text-green-400" />
+              <StatCard title="월 Deposit" value={formatAsUSD(selectedPeriodSummary.totalDeposit)} color="text-yellow-400" />
+              {/* ⚠️ 수정: "Cash" StatCard 추가 (청록색) */}
+              <StatCard title="월 Cash" value={formatAsUSD(selectedPeriodSummary.totalCash)} color="text-cyan-400" />
               <StatCard title="월 지출 (Expense)" value={formatAsUSD(selectedPeriodSummary.totalExpense)} color="text-red-400" />
-              <StatCard title="월 순이익" value={formatAsUSD(selectedPeriodSummary.netIncome)} color={selectedPeriodSummary.netIncome >= 0 ? "text-blue-400" : "text-red-400"} />
+              {/* ⚠️ 수정: "공식수익" 및 "비공식수익"으로 변경 (비공식수익을 메인으로 표시) */}
+              <StatCard 
+                title="비공식수익 (Dep+Cash-Exp)" 
+                value={formatAsUSD(selectedPeriodSummary.unofficialNetIncome)} 
+                color={selectedPeriodSummary.unofficialNetIncome >= 0 ? "text-blue-400" : "text-red-400"} 
+              />
+              {/* // 공식수익을 표시하고 싶다면 이 카드의 주석을 해제하고 grid-cols-6으로 변경하세요.
+                <StatCard 
+                  title="공식수익 (Dep-Exp)" 
+                  value={formatAsUSD(selectedPeriodSummary.officialNetIncome)} 
+                  color={selectedPeriodSummary.officialNetIncome >= 0 ? "text-blue-400" : "text-red-400"} 
+                />
+              */}
             </div>
         </div>
 

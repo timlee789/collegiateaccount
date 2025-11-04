@@ -63,10 +63,6 @@ export default function ReportDetailPage() {
   const [transactions, setTransactions] = useState([]);
   const [availableMonths, setAvailableMonths] = useState([]); // "YYYY-MM" 형식 저장
   const [selectedMonth, setSelectedMonth] = useState(''); // 선택된 "YYYY-MM" 형식 저장
-  // --- ⬇️ "연도별 카테고리 요약" 관련 state 제거 ⬇️ ---
-  // const [availableYears, setAvailableYears] = useState([]); 
-  // const [selectedBreakdownYear, setSelectedBreakdownYear] = useState('');
-  // --- ⬆️ "연도별 카테고리 요약" 관련 state 제거 ⬆️ ---
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -90,9 +86,6 @@ export default function ReportDetailPage() {
                   ...t,
                   _dateObj: dateObj,
                   _monthKey: `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`,
-                  // --- ⬇️ _year 속성 제거 ⬇️ ---
-                  // _year: dateObj.getFullYear().toString() 
-                  // --- ⬆️ _year 속성 제거 ⬆️ ---
               };
           }
           return null;
@@ -101,21 +94,9 @@ export default function ReportDetailPage() {
 
       setTransactions(validTransactions);
 
-      // --- ⬇️ "연도별 카테고리 요약" 관련 연도 추출 로직 제거 ⬇️ ---
-      // const years = [...new Set(validTransactions.map(t => t._year))]
-      //                .sort((a, b) => b.localeCompare(a));
-      // setAvailableYears(years);
-      // if (years.length > 0) {
-      //   setSelectedBreakdownYear(years[0]);
-      // } else {
-      //   setSelectedBreakdownYear(new Date().getFullYear().toString());
-      // }
-      // --- ⬆️ "연도별 카테고리 요약" 관련 연도 추출 로직 제거 ⬆️ ---
-
-
       // "YYYY-MM" 형식 추출 및 정렬 (기존 월 선택용)
       const months = [...new Set(validTransactions.map(t => t._monthKey))]
-                     .sort((a, b) => b.localeCompare(a));
+                       .sort((a, b) => b.localeCompare(a));
 
       setAvailableMonths(months);
 
@@ -127,15 +108,8 @@ export default function ReportDetailPage() {
     loadData();
   }, []);
 
-  // --- ⬇️ "모든 월별 카테고리 분석" 로직 제거 ⬇️ ---
-  // const allMonthsBreakdown = useMemo(() => {
-  // ... (관련 로직 모두 제거됨) ...
-  // }, [transactions]);
-  // --- ⬆️ "모든 월별 카테고리 분석" 로직 제거 ⬆️ ---
-
   // 2. 선택된 월이 변경될 때마다 데이터를 필터링하고 그룹화하며 월별 총합계를 계산합니다. (기존 로직 유지)
   const { groupedData, monthlyTotal } = useMemo(() => {
-    // ... (기존 groupedData, monthlyTotal 계산 로직 유지) ...
      if (!selectedMonth || transactions.length === 0) {
       return { groupedData: {}, monthlyTotal: 0 };
      }
@@ -156,7 +130,6 @@ export default function ReportDetailPage() {
 
   // 3. 카테고리별 요약 데이터 계산 (선택된 월 기준) (기존 로직 유지)
   const categorySummaryData = useMemo(() => {
-    // ... (기존 categorySummaryData 계산 로직 유지) ...
      if (Object.keys(groupedData).length === 0) {
       return [];
     }
@@ -176,13 +149,7 @@ export default function ReportDetailPage() {
       <div className="p-8 mx-auto mt-10 text-white">
         <h1 className="text-4xl font-extrabold mb-8 text-white border-b border-gray-700 pb-4">월별 상세 경비 보고서</h1>
 
-        {/* --- ⬇️ "모든 월별 요약 섹션" 렌더링 코드 제거 ⬇️ --- */}
-        {/* <div className="mb-8"> ... </div> */}
-        {/* --- ⬆️ "모든 월별 요약 섹션" 렌더링 코드 제거 ⬆️ --- */}
-
-
         {/* --- ⬇️ 선택된 월 보고서 섹션 (기존 유지) ⬇️ --- */}
-        {/* <hr className="border-gray-700 my-8"/> */} {/* 구분선 제거 */}
         <h2 className="text-2xl font-semibold mb-4 text-white">{selectedMonth} 상세 보고서</h2>
 
         {/* 월 선택 및 월별 총합계 표시 */}
@@ -279,6 +246,9 @@ function CategoryDetailTable({ transactions }) {
                          const payeeTransactions = groupedByPayee[payee];
                          const payeeSubtotalAmount = payeeTransactions.reduce((sum, t) => sum + (parseFloat(String(t.Amount).replace(/[^0-9.-]+/g, '')) || 0), 0);
                          const payeeSubtotalCash = payeeTransactions.reduce((sum, t) => sum + (parseFloat(String(t.CASH).replace(/[^0-9.-]+/g, '')) || 0), 0);
+                         // --- ⬇️ TOTAL 소계 계산 추가 ⬇️ ---
+                         const payeeSubtotalTotal = payeeTransactions.reduce((sum, t) => sum + (parseFloat(String(t.TOTAL).replace(/[^0-9.-]+/g, '')) || 0), 0);
+                         // --- ⬆️ TOTAL 소계 계산 추가 ⬆️ ---
 
                          return (
                              // 수정: Fragment에 고유한 key prop (payee 이름) 추가
@@ -293,12 +263,17 @@ function CategoryDetailTable({ transactions }) {
                                          <td className="px-4 py-2 text-sm text-gray-200">{t.Concept}</td>
                                      </tr>
                                  ))}
+                                 {/* --- ⬇️ Subtotal 행 수정 ⬇️ --- */}
                                  <tr className="bg-gray-700 border-t border-gray-600">
                                      <td className="px-4 py-2 text-sm font-semibold text-gray-400 text-right italic">Subtotal for {payee}</td>
                                      <td className="px-4 py-2 text-sm font-semibold text-gray-200 text-right italic">{formatAsUSD(payeeSubtotalAmount)}</td>
                                      <td className="px-4 py-2 text-sm font-semibold text-gray-200 text-right italic">{formatAsUSD(payeeSubtotalCash)}</td>
-                                     <td colSpan="3"></td>
+                                     {/* TOTAL 소계 표시 추가 */}
+                                     <td className="px-4 py-2 text-sm font-semibold text-gray-200 text-right italic">{formatAsUSD(payeeSubtotalTotal)}</td>
+                                     {/* colSpan 수정 (3 -> 2) */}
+                                     <td colSpan="2"></td>
                                  </tr>
+                                 {/* --- ⬆️ Subtotal 행 수정 ⬆️ --- */}
                              </React.Fragment> // 수정: Fragment 닫기 (명시적으로 React.Fragment 사용)
                          );
                      })}
