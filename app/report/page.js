@@ -157,7 +157,8 @@ export default function ReportPage() {
           if (t.Div !== 'Expense' || !t._monthKey) return;
           const monthKey = t._monthKey;
           const category = t.Category || '기타';
-          const amount = parseFloat(String(t.Amount).replace(/[^0-9.-]+/g, '')) || 0;
+          // ⚠️ 수정: t.Amount -> t.TOTAL
+          const amount = parseFloat(String(t.TOTAL).replace(/[^0-9.-]+/g, '')) || 0;
           if (!monthlyData[monthKey]) {
               monthlyData[monthKey] = { categoriesMap: {}, total: 0 };
           }
@@ -193,12 +194,15 @@ export default function ReportPage() {
     const yearlyTransactions = transactions.filter(t => t._year === selectedYear);
 
     // --- Re-implement getFinancialSummary logic client-side for the filtered data ---
-    // ⚠️ 수정: _monthKey, Div, Category, Amount 사용
+    // ⚠️ 수정: _monthKey, Div, Category, TOTAL 사용
     const mapped = yearlyTransactions.map(t => ({
         yearMonth: t._monthKey,
         div: t.Div,
         category: t.Category,
-        amount: parseFloat(String(t.Amount).replace(/[^0-9.-]+/g, '')) || 0
+        // ⚠️ 수정: t.Amount -> t.TOTAL (지출 합계용)
+        // ⚠️ [정정] Goolge Sheet의 "Income" Div에는 TOTAL이 없을 수 있습니다.
+        // 따라서 Div에 따라 Amount 또는 TOTAL을 사용합니다.
+        amount: parseFloat(String(t.Div === 'Expense' ? t.TOTAL : t.Amount).replace(/[^0-9.-]+/g, '')) || 0
     }));
 
     // Monthly summary for the selected year
@@ -218,6 +222,7 @@ export default function ReportPage() {
             const month = t.yearMonth;
             const category = t.category || '기타';
             if (!categorySummary[month]) categorySummary[month] = {};
+            // ⚠️ 참고: 이 amount는 t.TOTAL에서 파생되었습니다.
             categorySummary[month][category] = (categorySummary[month][category] || 0) + t.amount;
         }
     });
@@ -251,7 +256,7 @@ export default function ReportPage() {
             <select
               id="year-select"
               value={selectedYear}
-              onChange={(e) => setSelectedYear(e.g.value)}
+              onChange={(e) => setSelectedYear(e.target.value)} // ⚠️ 수정: e.g.value -> e.target.value
               className="block w-full py-2 px-3 border border-gray-600 bg-gray-700 text-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
             >
               {availableYears.map(year => (

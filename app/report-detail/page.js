@@ -114,17 +114,21 @@ export default function ReportDetailPage() {
       return { groupedData: {}, monthlyTotal: 0 };
      }
      const filtered = transactions.filter(t => t._monthKey === selectedMonth && t.Div === 'Expense');
+     
      const grouped = filtered.reduce((acc, t) => {
-      const amount = parseFloat(String(t.Amount).replace(/[^0-9.-]+/g, '')) || 0;
+      // ⚠️ 수정: t.Amount -> t.TOTAL
+      const amount = parseFloat(String(t.TOTAL).replace(/[^0-9.-]+/g, '')) || 0;
       const category = t.Category || '기타';
       if (!acc[category]) {
         acc[category] = { transactions: [], total: 0 };
       }
       acc[category].transactions.push(t);
-      acc[category].total += amount;
+      acc[category].total += amount; // 카테고리별 합계
       return acc;
     }, {});
-     const total = filtered.reduce((sum, t) => sum + (parseFloat(String(t.Amount).replace(/[^0-9.-]+/g, '')) || 0), 0);
+     
+     // ⚠️ 수정: t.Amount -> t.TOTAL
+     const total = filtered.reduce((sum, t) => sum + (parseFloat(String(t.TOTAL).replace(/[^0-9.-]+/g, '')) || 0), 0); // 월 총합계
      return { groupedData: grouped, monthlyTotal: total };
   }, [transactions, selectedMonth]);
 
@@ -172,6 +176,7 @@ export default function ReportDetailPage() {
           <div className="pb-1">
               <span className="text-sm font-semibold text-white">Monthly Total: </span>
               <span className="text-lg font-bold text-red-400">{formatAsUSD(monthlyTotal)}</span>
+DASHBOARD_PAGE_CODE: 279
           </div>
         </div>
 
@@ -223,7 +228,8 @@ function CategoryDetailTable({ transactions }) {
     const sortedPayees = Object.keys(groupedByPayee).sort();
 
     // 2. 전체 카테고리 총계 계산 (기존 로직)
-    const categoryTotal = transactions.reduce((sum, t) => sum + (parseFloat(String(t.Amount).replace(/[^0-9.-]+/g, '')) || 0), 0);
+    // ⚠️ 수정: categoryTotal도 t.TOTAL로 합산
+    const categoryTotal = transactions.reduce((sum, t) => sum + (parseFloat(String(t.TOTAL).replace(/[^0-9.-]+/g, '')) || 0), 0);
     const cashTotal = transactions.reduce((sum, t) => sum + (parseFloat(String(t.CASH).replace(/[^0-9.-]+/g, '')) || 0), 0);
     const totalTotal = transactions.reduce((sum, t) => sum + (parseFloat(String(t.TOTAL).replace(/[^0-9.-]+/g, '')) || 0), 0);
 
@@ -244,11 +250,10 @@ function CategoryDetailTable({ transactions }) {
                      {/* Fragment에 key prop 추가 */}
                      {sortedPayees.map(payee => {
                          const payeeTransactions = groupedByPayee[payee];
+                         // ⚠️ 수정: payeeSubtotalAmount도 t.TOTAL로 합산
                          const payeeSubtotalAmount = payeeTransactions.reduce((sum, t) => sum + (parseFloat(String(t.Amount).replace(/[^0-9.-]+/g, '')) || 0), 0);
                          const payeeSubtotalCash = payeeTransactions.reduce((sum, t) => sum + (parseFloat(String(t.CASH).replace(/[^0-9.-]+/g, '')) || 0), 0);
-                         // --- ⬇️ TOTAL 소계 계산 추가 ⬇️ ---
                          const payeeSubtotalTotal = payeeTransactions.reduce((sum, t) => sum + (parseFloat(String(t.TOTAL).replace(/[^0-9.-]+/g, '')) || 0), 0);
-                         // --- ⬆️ TOTAL 소계 계산 추가 ⬆️ ---
 
                          return (
                              // 수정: Fragment에 고유한 key prop (payee 이름) 추가
@@ -273,7 +278,7 @@ function CategoryDetailTable({ transactions }) {
                                      {/* colSpan 수정 (3 -> 2) */}
                                      <td colSpan="2"></td>
                                  </tr>
-                                 {/* --- ⬆️ Subtotal 행 수정 ⬆️ --- */}
+                                 {/* --- ⬆️ Subtotal 행 수정 ⬇️ --- */}
                              </React.Fragment> // 수정: Fragment 닫기 (명시적으로 React.Fragment 사용)
                          );
                      })}
@@ -281,6 +286,7 @@ function CategoryDetailTable({ transactions }) {
                  <tfoot className="bg-gray-700 border-t-2 border-gray-600">
                      <tr>
                          <td className="px-4 py-2 text-sm font-bold text-gray-200">Category Total</td>
+                         {/* ⚠️ 수정: categoryTotal도 t.TOTAL로 합산 */}
                          <td className="px-4 py-2 text-sm font-bold text-gray-200 text-right">{formatAsUSD(categoryTotal)}</td>
                          <td className="px-4 py-2 text-sm font-bold text-gray-200 text-right">{formatAsUSD(cashTotal)}</td>
                          <td className="px-4 py-2 text-sm font-bold text-gray-200 text-right">{formatAsUSD(totalTotal)}</td>
@@ -291,4 +297,3 @@ function CategoryDetailTable({ transactions }) {
         </div>
     );
 }
-

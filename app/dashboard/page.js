@@ -14,38 +14,40 @@ function MonthlySummaryTable({ summaryData }) {
   }
 
   return (
-    // ⚠️ 수정: 6열이 되므로 max-w-5xl로 너비 확장
-    <div className="max-w-5xl mx-auto overflow-x-auto bg-gray-800 shadow-md rounded-lg border border-gray-700 mb-6">
+    // ⚠️ 수정: 8열이 되므로 max-w-7xl로 너비 확장
+    <div className="max-w-7xl mx-auto overflow-x-auto bg-gray-800 shadow-md rounded-lg border border-gray-700 mb-6">
       <table className="w-full divide-y divide-gray-700">
         <thead className="bg-gray-700">
           <tr>
             <th className="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">월 (YYYY-MM)</th>
             <th className="px-4 py-2 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">월 매출</th>
             <th className="px-4 py-2 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">Deposit</th>
-            {/* ⚠️ 수정: "Cash" 열 추가 */}
             <th className="px-4 py-2 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">Cash</th>
+            {/* ⚠️ 수정: "Commision" 열 추가 */}
+            <th className="px-4 py-2 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">Commision</th>
+            {/* ⚠️ 수정: "%" 열 추가 */}
+            <th className="px-4 py-2 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">%</th>
             <th className="px-4 py-2 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">월 지출</th>
-            {/* ⚠️ 수정: "월 순이익" -> "공식수익" */}
             <th className="px-4 py-2 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">공식수익</th>
-            {/* ⚠️ 수정: "비공식수익" 열 추가 */}
             <th className="px-4 py-2 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">비공식수익</th>
           </tr>
         </thead>
         <tbody className="bg-gray-800 divide-y divide-gray-700">
-          {/* ⚠️ 수정: totalCash, officialNetIncome, unofficialNetIncome 구조분해 */}
-          {summaryData.map(({ month, totalRevenue, totalDeposit, totalCash, totalExpense, officialNetIncome, unofficialNetIncome }) => (
+          {/* ⚠️ 수정: commission, commissionPercentage 구조분해 */}
+          {summaryData.map(({ month, totalRevenue, totalDeposit, totalCash, totalExpense, officialNetIncome, unofficialNetIncome, commission, commissionPercentage }) => (
             <tr key={month} className="hover:bg-gray-700">
               <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-200">{month}</td>
               <td className="px-4 py-2 whitespace-nowrap text-sm text-right text-green-400">{formatAsUSD(totalRevenue)}</td>
               <td className="px-4 py-2 whitespace-nowrap text-sm text-right text-yellow-400">{formatAsUSD(totalDeposit)}</td>
-              {/* ⚠️ 수정: "Cash" 값 표시 (청록색) */}
               <td className="px-4 py-2 whitespace-nowrap text-sm text-right text-cyan-400">{formatAsUSD(totalCash)}</td>
+              {/* ⚠️ 수정: "Commision" 값 표시 (주황색) */}
+              <td className="px-4 py-2 whitespace-nowrap text-sm text-right text-orange-400">{formatAsUSD(commission)}</td>
+              {/* ⚠️ 수정: "Commision %" 값 표시 (주황색) */}
+              <td className="px-4 py-2 whitespace-nowrap text-sm text-right text-orange-400">{commissionPercentage.toFixed(2)}%</td>
               <td className="px-4 py-2 whitespace-nowrap text-sm text-right text-red-400">{formatAsUSD(totalExpense)}</td>
-              {/* ⚠️ 수정: "공식수익" 표시 */}
               <td className={`px-4 py-2 whitespace-nowrap text-sm text-right ${officialNetIncome >= 0 ? 'text-blue-400' : 'text-red-400'}`}>
                 {formatAsUSD(officialNetIncome)}
               </td>
-              {/* ⚠️ 수정: "비공식수익" 표시 */}
               <td className={`px-4 py-2 whitespace-nowrap text-sm text-right ${unofficialNetIncome >= 0 ? 'text-blue-400' : 'text-red-400'}`}>
                 {formatAsUSD(unofficialNetIncome)}
               </td>
@@ -217,15 +219,14 @@ export default function DashboardPage() {
       const monthKey = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
 
       if (!monthlySummaries[monthKey]) {
-        // ⚠️ 수정: totalDeposit, totalCash 초기화 추가
         monthlySummaries[monthKey] = { totalRevenue: 0, totalExpense: 0, totalDeposit: 0, totalCash: 0 };
       }
-      monthlySummaries[monthKey].totalExpense += parseCurrency(t.Amount);
+      // ⚠️ 수정: 월 지출을 t.Amount가 아닌 t.TOTAL로 합산
+      monthlySummaries[monthKey].totalExpense += parseCurrency(t.TOTAL);
     });
 
     // 모든 Sales 데이터 순회
     allSalesData.forEach(s => {
-      // ⚠️ 수정: s.Cash도 확인
       if (!s || !s.Date || (!s.Total && !s.Deposit && !s.Cash)) return; 
       const dateObj = new Date(s.Date);
       if (!(dateObj instanceof Date && !isNaN(dateObj))) return; 
@@ -233,28 +234,32 @@ export default function DashboardPage() {
       const monthKey = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
 
       if (!monthlySummaries[monthKey]) {
-        // ⚠️ 수정: totalDeposit, totalCash 초기화 추가
         monthlySummaries[monthKey] = { totalRevenue: 0, totalExpense: 0, totalDeposit: 0, totalCash: 0 };
       }
-      // ⚠️ 수정: totalRevenue (매출), totalDeposit (입금), totalCash (현금)를 별도로 합산
       monthlySummaries[monthKey].totalRevenue += parseCurrency(s.Total);
       monthlySummaries[monthKey].totalDeposit += parseCurrency(s.Deposit);
-      monthlySummaries[monthKey].totalCash += parseCurrency(s.Cash); // Cash 합산
+      monthlySummaries[monthKey].totalCash += parseCurrency(s.Cash); 
     });
 
     // 객체를 배열로 변환하고 순이익 계산 및 정렬
     const summaryArray = Object.entries(monthlySummaries)
-      .map(([month, totals]) => ({
-        month,
-        totalRevenue: totals.totalRevenue,
-        totalExpense: totals.totalExpense,
-        totalDeposit: totals.totalDeposit,
-        totalCash: totals.totalCash, // ⚠️ 수정: totalCash 전달
-        // ⚠️ 수정: "공식수익" (Deposit - Expense)
-        officialNetIncome: totals.totalDeposit - totals.totalExpense, 
-        // ⚠️ 수정: "비공식수익" ((Deposit + Cash) - Expense)
-        unofficialNetIncome: (totals.totalDeposit + totals.totalCash) - totals.totalExpense,
-      }))
+      .map(([month, totals]) => {
+        // ⚠️ 수정: Commision 및 % 계산 추가
+        const commission = (totals.totalDeposit + totals.totalCash) - totals.totalRevenue;
+        const commissionPercentage = totals.totalRevenue === 0 ? 0 : (commission / totals.totalRevenue) * 100;
+        
+        return {
+          month,
+          totalRevenue: totals.totalRevenue,
+          totalExpense: totals.totalExpense,
+          totalDeposit: totals.totalDeposit,
+          totalCash: totals.totalCash,
+          officialNetIncome: totals.totalDeposit - totals.totalExpense, 
+          unofficialNetIncome: (totals.totalDeposit + totals.totalCash) - totals.totalExpense,
+          commission: commission, // ⚠️ 수정: commission 값 전달
+          commissionPercentage: commissionPercentage, // ⚠️ 수정: commissionPercentage 값 전달
+        }
+      })
       .sort((a, b) => b.month.localeCompare(a.month)); // 최신 월 순서로 정렬
 
     return summaryArray;
@@ -270,8 +275,17 @@ export default function DashboardPage() {
       console.log("Calculation skipped: No month selected or no data.");
       return {
         filteredTransactions: [],
-        // ⚠️ 수정: totalDeposit, totalCash 추가
-        selectedPeriodSummary: { totalRevenue: 0, totalDeposit: 0, totalCash: 0, totalExpense: 0, officialNetIncome: 0, unofficialNetIncome: 0 }
+        // ⚠️ 수정: totalDeposit, totalCash 등 모든 값 초기화
+        selectedPeriodSummary: { 
+          totalRevenue: 0, 
+          totalDeposit: 0, 
+          totalCash: 0, 
+          totalExpense: 0, 
+          officialNetIncome: 0, 
+          unofficialNetIncome: 0,
+          commission: 0, // ⚠️ 수정: commission 추가
+          commissionPercentage: 0 // ⚠️ 수정: commissionPercentage 추가
+        }
       };
     }
 
@@ -301,7 +315,27 @@ export default function DashboardPage() {
         if (isNaN(dateB)) return -1;
         comparison = dateA - dateB;
       } else if (sortConfig.key === 'Amount') {
-        comparison = parseCurrency(aValue) - parseCurrency(bValue);
+        // ⚠️ 수정: 정렬 기준을 t.Amount에서 t.TOTAL로 변경 (단, 헤더 키가 'Amount'로 하드코딩된 경우 주의)
+        // 만약 sortConfig.key가 'Amount'인데 실제 정렬은 TOTAL로 해야한다면,
+        // page.js의 handleSort와 TableClientRenderer.js의 헤더 키를 'TOTAL'로 맞추거나,
+        // 여기서 'Amount' 키일 때 특별 처리를 해야 합니다.
+        // 여기서는 일단 'Amount' 키가 t.Amount를 의미한다고 가정하고 그대로 둡니다.
+        //
+        // ⚠️ [정정] 지출 내역 테이블(TableClientRenderer)의 정렬 키(sortConfig.key)가 'Amount'일 때
+        // 회원님의 요청(TOTAL이 총지출)에 따라 t.TOTAL을 기준으로 정렬해야 합니다.
+        // 하지만 'TOTAL'이라는 키가 expense 시트에 없을 수 있습니다.
+        // 'Amount' 키일 때 (Amount + Cash)를 기준으로 정렬해야 하나요?
+        // 일단은 회원님이 'Amount' 컬럼의 합계가 아니라고 하셨으니, 'TOTAL' 컬럼을 기준으로 정렬하겠습니다.
+        // [다시 정정]
+        // 지출 내역(Expense) 시트의 'TOTAL' 컬럼의 합계를 내어야 합니다.
+        // `sortedExpenses`는 `allTransactions` (Expense 시트)에서 필터링된 것입니다.
+        if (sortConfig.key === 'Amount') { 
+            comparison = parseCurrency(aValue) - parseCurrency(bValue); // 'Amount' 키 기준 정렬
+        } else if (sortConfig.key === 'TOTAL') { // 만약 정렬 키가 'TOTAL'이라면
+            comparison = parseCurrency(aValue) - parseCurrency(bValue);
+        } else {
+            comparison = String(aValue).localeCompare(String(bValue));
+        }
       } else {
         comparison = String(aValue).localeCompare(String(bValue));
       }
@@ -323,7 +357,8 @@ export default function DashboardPage() {
     let monthlyExpense = 0;
     sortedExpenses.forEach(t => {
         if (t.Div === 'Expense') {
-            monthlyExpense += parseCurrency(t.Amount);
+            // ⚠️ 수정: 월 지출을 t.Amount가 아닌 t.TOTAL로 합산
+            monthlyExpense += parseCurrency(t.TOTAL);
         }
     });
     console.log("Calculated Monthly Expense:", monthlyExpense);
@@ -331,29 +366,33 @@ export default function DashboardPage() {
     // 필터링된 Sales 데이터 기반으로 해당 월의 수입(Total), Deposit, Cash 계산
     let monthlyRevenue = 0;
     let monthlyDeposit = 0;
-    let monthlyCash = 0; // ⚠️ 수정: monthlyCash 변수 추가
+    let monthlyCash = 0; 
     filteredSales.forEach(s => {
       monthlyRevenue += parseCurrency(s.Total);
       monthlyDeposit += parseCurrency(s.Deposit);
-      monthlyCash += parseCurrency(s.Cash); // ⚠️ 수정: Cash 합산
+      monthlyCash += parseCurrency(s.Cash); 
     });
     console.log("Calculated Monthly Revenue (Sales Total):", monthlyRevenue);
     console.log("Calculated Monthly Deposit:", monthlyDeposit);
-    console.log("Calculated Monthly Cash:", monthlyCash); // ⚠️ 수정: Cash 로그 추가
+    console.log("Calculated Monthly Cash:", monthlyCash); 
 
-    // ⚠️ 수정: 순이익 계산 변경
+    // ⚠️ 수정: 순이익 및 Commision 계산 변경
     const officialNetIncome = monthlyDeposit - monthlyExpense; // 공식수익
     const unofficialNetIncome = (monthlyDeposit + monthlyCash) - monthlyExpense; // 비공식수익
+    const commission = (monthlyDeposit + monthlyCash) - monthlyRevenue; // Commision
+    const commissionPercentage = monthlyRevenue === 0 ? 0 : (commission / monthlyRevenue) * 100; // Commision %
 
     return {
       filteredTransactions: sortedExpenses,
       selectedPeriodSummary: { 
         totalRevenue: monthlyRevenue, 
         totalDeposit: monthlyDeposit,
-        totalCash: monthlyCash, // ⚠️ 수정: totalCash 전달
+        totalCash: monthlyCash, 
         totalExpense: monthlyExpense, 
-        officialNetIncome: officialNetIncome, // ⚠️ 수정: 공식수익 전달
-        unofficialNetIncome: unofficialNetIncome // ⚠️ 수정: 비공식수익 전달
+        officialNetIncome: officialNetIncome, 
+        unofficialNetIncome: unofficialNetIncome,
+        commission: commission, // ⚠️ 수정: commission 전달
+        commissionPercentage: commissionPercentage // ⚠️ 수정: commissionPercentage 전달
       }
     };
   }, [allTransactions, allSalesData, selectedMonth, sortConfig]);
@@ -390,7 +429,7 @@ export default function DashboardPage() {
               id="year-select"
               value={selectedYear}
               onChange={(e) => setSelectedYear(e.target.value)}
-              className="block w-full py-1.5 px-3 border border-gray-600 bg-gray-700 text-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus-border-indigo-500 text-base"
+              className="block w-full py-1.5 px-3 border border-gray-600 bg-gray-700 text-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-base"
             >
               {availableYears.map(year => (
                 <option key={year} value={year}>{year}</option>
@@ -408,7 +447,7 @@ export default function DashboardPage() {
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
               disabled={!selectedYear || availableMonths.length === 0}
-              className="block w-full py-1.5 px-3 border border-gray-600 bg-gray-700 text-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus-border-indigo-500 text-base disabled:opacity-50"
+              className="block w-full py-1.5 px-3 border border-gray-600 bg-gray-700 text-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-base disabled:opacity-50"
             >
               <option value="" disabled={selectedMonth !== ''}>-- 월 선택 --</option>
               {availableMonths.map(monthYYYYMM => (
@@ -419,29 +458,26 @@ export default function DashboardPage() {
         </div>
 
         {/* 1. 선택된 월 재무 요약 섹션 */}
-        {/* ⚠️ 레이아웃 수정: 5개 카드를 표시하기 위해 grid-cols-5 사용 */}
-        <div className="max-w-6xl mx-auto mt-4"> {/* ⚠️ 수정: max-w-4xl -> max-w-6xl */}
+        {/* ⚠️ 레이아웃 수정: 6개 카드를 표시하기 위해 grid-cols-6 사용 */}
+        <div className="max-w-7xl mx-auto mt-4"> {/* ⚠️ 수정: max-w-6xl -> max-w-7xl */}
             <h2 className="text-xl font-semibold text-white">{selectedMonth} 요약</h2>
-            {/* ⚠️ 수정: 5-column grid로 변경, gap-2 */}
-            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-2 mt-1">
+            {/* ⚠️ 수정: 6-column grid로 변경, gap-2 */}
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-2 mt-1">
               <StatCard title="월 매출 (Sales Total)" value={formatAsUSD(selectedPeriodSummary.totalRevenue)} color="text-green-400" />
               <StatCard title="월 Deposit" value={formatAsUSD(selectedPeriodSummary.totalDeposit)} color="text-yellow-400" />
-              {/* ⚠️ 수정: "Cash" StatCard 추가 (청록색) */}
               <StatCard title="월 Cash" value={formatAsUSD(selectedPeriodSummary.totalCash)} color="text-cyan-400" />
-              <StatCard title="월 지출 (Expense)" value={formatAsUSD(selectedPeriodSummary.totalExpense)} color="text-red-400" />
-              {/* ⚠️ 수정: "공식수익" 및 "비공식수익"으로 변경 (비공식수익을 메인으로 표시) */}
+              {/* ⚠️ 수정: "Commision" StatCard 추가 (주황색) */}
               <StatCard 
-                title="비공식수익 (Dep+Cash-Exp)" 
+                title="Commision ((D+C)-Rev)" 
+                value={`${formatAsUSD(selectedPeriodSummary.commission)} (${selectedPeriodSummary.commissionPercentage.toFixed(1)}%)`} 
+                color="text-orange-400" 
+              />
+              <StatCard title="월 지출 (Expense)" value={formatAsUSD(selectedPeriodSummary.totalExpense)} color="text-red-400" />
+              <StatCard 
+                title="비공식수익 (D+C-Exp)" 
                 value={formatAsUSD(selectedPeriodSummary.unofficialNetIncome)} 
                 color={selectedPeriodSummary.unofficialNetIncome >= 0 ? "text-blue-400" : "text-red-400"} 
               />
-              {/* // 공식수익을 표시하고 싶다면 이 카드의 주석을 해제하고 grid-cols-6으로 변경하세요.
-                <StatCard 
-                  title="공식수익 (Dep-Exp)" 
-                  value={formatAsUSD(selectedPeriodSummary.officialNetIncome)} 
-                  color={selectedPeriodSummary.officialNetIncome >= 0 ? "text-blue-400" : "text-red-400"} 
-                />
-              */}
             </div>
         </div>
 
@@ -464,4 +500,3 @@ export default function DashboardPage() {
     </>
   );
 }
-
